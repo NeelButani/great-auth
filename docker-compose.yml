@@ -1,0 +1,88 @@
+services:
+
+  # ─────────────────────────────────────────
+  # PostgreSQL Container
+  # ─────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    # Container name — this is why DB_HOST=postgres in your .env
+    # Other containers reach this using "postgres" as hostname
+    container_name: auth_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      # This is where your data lives permanently on YOUR machine
+      # Left side → folder on your machine
+      # Right side → folder inside the container
+      - postgres_data:/var/lib/postgresql/data
+    # Restart automatically if it crashes
+    restart: unless-stopped
+    # Health check — is postgres actually ready to accept connections?
+    # Docker will wait for this before starting Node
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # Redis Container
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    # This is why REDIS_HOST=redis in your .env
+    container_name: auth_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # Node.js App Container
+  # ─────────────────────────────────────────
+  app:
+    # Build from your Dockerfile instead of pulling an image
+    build: .
+    container_name: auth_app
+    ports:
+      - "3000:3000"
+    # Pass ALL your .env variables into the container
+    env_file:
+      - .env
+    volumes:
+      # Sync your local code with the container in real time
+      # Left → your machine, Right → inside container
+      # This means code changes reflect immediately
+      - .:/app
+      # This is critical — without this line, the volume mount above
+      # would overwrite node_modules inside container with your
+      # local node_modules (or nothing). This preserves the container's
+      # own node_modules.
+      - /app/node_modules
+    # Node app must wait for postgres AND redis to be healthy
+    # Without this, Node starts before DB is ready → connection error
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ─────────────────────────────────────────
+# Named Volumes
+# Declared here so Docker manages them
+# Data persists even when containers are deleted
+# ─────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:

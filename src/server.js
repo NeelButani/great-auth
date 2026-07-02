@@ -1,3 +1,4 @@
+import './config/db.js'
 import './config/redis.js'  // Connect redis on startup
 import app from './app.js'
 import { env } from './config/env.js'

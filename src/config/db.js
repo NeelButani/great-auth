@@ -22,4 +22,8 @@ pool.on('error', (err) => {
   process.exit(1)
 })
 
+pool.query('SELECT 1').catch((err) => {
+  console.error('❌ Failed to connect to database during startup:', err.message)
+})
+
 export default pool
