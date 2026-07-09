@@ -1,18 +1,20 @@
 import { createClient } from 'redis'
-import { env } from './env.js'
+import type { RedisClientType } from 'redis'
+import { env } from './env'
 
-const redisClient = createClient({
+// Create Redis client with proper typing
+const redisClient: RedisClientType = createClient({
   socket: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
   }
-})
+}) as RedisClientType
 
 redisClient.on('connect', () => {
   console.log('✅ Redis connected')
 })
 
-redisClient.on('error', (err) => {
+redisClient.on('error', (err: Error) => {
   console.error('❌ Redis error:', err.message)
 })
 

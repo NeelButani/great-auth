@@ -21,6 +21,10 @@ const envSchema = z.object({
   REDIS_PORT: z.string().transform(Number),
 })
 
+// Type inference from zod schema
+// This gives you autocomplete and type safety everywhere you use env
+type Environment = z.infer<typeof envSchema>
+
 // Actually validate — if anything is wrong, this throws immediately
 const parsed = envSchema.safeParse(process.env)
 
@@ -30,4 +34,4 @@ if (!parsed.success) {
   process.exit(1)  // Stop the app completely
 }
 
-export const env = parsed.data
+export const env: Environment = parsed.data

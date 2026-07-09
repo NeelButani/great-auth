@@ -1,7 +1,12 @@
-import pool from '../config/db.js'
-import redisClient from '../config/redis.js'
+import type { Request, Response, NextFunction } from 'express'
+import pool from '../config/db'
+import redisClient from '../config/redis'
 
-export const healthCheck = async (req, res, next) => {
+export const healthCheck = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     // Check PostgreSQL
     const dbStart = Date.now()

@@ -1,10 +1,11 @@
 import pg from 'pg'
-import { env } from './env.js'
+import type { Pool as PoolType } from 'pg'
+import { env } from './env'
 
 const { Pool } = pg
 
-// Create a connection pool
-const pool = new Pool({
+// Create a connection pool with proper typing
+const pool: PoolType = new Pool({
   host: env.DB_HOST,
   port: env.DB_PORT,
   database: env.DB_NAME,
@@ -17,12 +18,13 @@ pool.on('connect', () => {
   console.log('✅ PostgreSQL connected')
 })
 
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   console.error('❌ PostgreSQL error:', err.message)
   process.exit(1)
 })
 
-pool.query('SELECT 1').catch((err) => {
+// Test connection on startup
+pool.query('SELECT 1').catch((err: Error) => {
   console.error('❌ Failed to connect to database during startup:', err.message)
 })
 

@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
+import { env } from '../config/env'
 
 dotenv.config()
 
@@ -12,18 +13,24 @@ dotenv.config()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Type for migration query result
+interface MigrationRow {
+  filename: string
+}
+
 // Create a direct client (not pool) for migrations.
 // We use a single client here because migrations run
 // sequentially once — a pool is overkill.
+// Use env instead of process.env
 const client = new pg.Client({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: env.DB_HOST,
+  port: env.DB_PORT,        // ← Already a number
+  database: env.DB_NAME,
+  user: env.DB_USER,
+  password: env.DB_PASSWORD,
 })
 
-const runMigrations = async () => {
+const runMigrations = async (): Promise<void> => {
   try {
     // Step 1 — Connect to database
     await client.connect()
@@ -47,14 +54,16 @@ const runMigrations = async () => {
     // Alphabetical sort = numerical order
     const migrationsDir = path.join(__dirname, 'migrations')
     const files = fs.readdirSync(migrationsDir)
-      .filter(f => f.endsWith('.sql'))
+      .filter((f: string) => f.endsWith('.sql'))
       .sort()
 
     console.log(`📂 Found ${files.length} migration files`)
 
     // Step 4 — Check which files have already run
     const result = await client.query('SELECT filename FROM migrations')
-    const completedMigrations = result.rows.map(row => row.filename)
+    const completedMigrations = (result.rows as MigrationRow[]).map(
+      (row: MigrationRow) => row.filename
+    )
 
     // Step 5 — Run only the ones that haven't run yet
     for (const file of files) {
@@ -87,14 +96,16 @@ const runMigrations = async () => {
       } catch (err) {
         // Something went wrong — undo everything in this migration
         await client.query('ROLLBACK')
-        throw new Error(`Migration ${file} failed: ${err.message}`)
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        throw new Error(`Migration ${file} failed: ${errorMessage}`)
       }
     }
 
     console.log('🎉 All migrations complete')
 
   } catch (err) {
-    console.error('❌ Migration error:', err.message)
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error('❌ Migration error:', errorMessage)
     process.exit(1)
   } finally {
     // Always close the connection whether success or failure
