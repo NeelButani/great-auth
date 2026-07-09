@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors'
 import { env } from './config/env.js';
 import morgan from 'morgan';
+import healthRoutes from './routes/health.routes.js'
 
 
 const app = express();
@@ -10,7 +11,7 @@ const app = express();
 // Middlewares 
 
 // 1. Security Header
-app.use(helmet);
+app.use(helmet());
 
 // 2. Cors
 app.use(cors({
@@ -23,6 +24,8 @@ app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'))
 
 // 4. Parse incoming JSON bodies
 app.use(express.json())
+
+app.use('/api', healthRoutes)
 
 // --- 404 Handler (after all routes) ---
 app.use((req, res) => {
